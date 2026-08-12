@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IOS Drill</title>
+    <style>
+        :root{
+            --bg:#0d0d0d;
+            --surface:#141414;
+            --surface-2:#1a1a1a;
+            --border:#262626;
+            --border-strong:#333333;
+            --teal:#14b8a6;
+            --teal-bright:#00C9A7;
+            --teal-dim:#0a5c53;
+            --amber:#f59e0b;
+            --text:#e8e8e6;
+            --text-dim:#8a8a88;
+            --text-faint:#565654;
+            --danger:#ef4444;
+            --success:#22c55e;
+            --mono:'SF Mono','JetBrains Mono','Fira Code',ui-monospace,Consolas,monospace;
+            --sans:'Inter',ui-sans-serif,-apple-system,'Segoe UI',sans-serif;
+        }
+        *{box-sizing:border-box;}
+        html,body{height:100%;}
+        body{
+            margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+            -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden;
+        }
+        header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;}
+        .brand{margin-right:auto;}
+        .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:0;}
+        h1{font-family:var(--mono);font-size:18px;font-weight:600;margin:2px 0 0;letter-spacing:-.01em;}
+        header button{
+            font-family:var(--mono);font-size:11px;background:var(--surface-2);color:var(--text);
+            border:1px solid var(--border-strong);padding:8px 12px;border-radius:6px;cursor:pointer;
+        }
+        header button:hover{border-color:var(--teal);color:var(--teal-bright);}
+        header button.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+        main{flex:1;display:flex;min-height:0;}
+
+        #termWrap{flex:1;display:flex;flex-direction:column;padding:16px;min-width:0;}
+        #term{
+            flex:1;background:#080808;border:1px solid var(--border);border-radius:8px;
+            padding:14px 16px;overflow-y:auto;font-family:var(--mono);font-size:13px;line-height:1.6;
+        }
+        .line{white-space:pre-wrap;word-break:break-word;}
+        .line.cmd{color:var(--text);}
+        .line.cmd .prompt{color:var(--teal-bright);}
+        .line.out{color:var(--text-dim);}
+        .line.err{color:var(--danger);}
+        .line.sys{color:var(--amber);}
+        #inputRow{
+            display:flex;align-items:center;gap:6px;margin-top:10px;
+            background:#080808;border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+            font-family:var(--mono);font-size:13px;
+        }
+        #promptSpan{color:var(--teal-bright);white-space:nowrap;}
+        #cmdInput{
+            flex:1;background:transparent;border:none;outline:none;color:var(--text);
+            font-family:var(--mono);font-size:13px;
+        }
+
+        #sidebar{width:340px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);
+            display:flex;flex-direction:column;overflow-y:auto;}
+        .side-section{padding:16px;border-bottom:1px solid var(--border);}
+        .side-title{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);margin:0 0 10px;display:flex;justify-content:space-between;}
+        .task{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
+        .task:last-child{border-bottom:none;}
+        .task-check{
+            width:16px;height:16px;border-radius:4px;border:1px solid var(--border-strong);
+            flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;
+            font-size:10px;color:var(--bg);
+        }
+        .task.done .task-check{background:var(--teal);border-color:var(--teal);}
+        .task-text{font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.5;}
+        .task.done .task-text{color:var(--text-faint);text-decoration:line-through;}
+        .score{font-family:var(--mono);font-size:11px;color:var(--teal-bright);}
+
+        .ref-mode{font-family:var(--mono);font-size:11px;color:var(--teal-bright);margin:12px 0 6px;}
+        .ref-mode:first-child{margin-top:0;}
+        .ref-cmd{font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;padding-left:8px;}
+        .ref-cmd b{color:var(--text);font-weight:400;}
+
+        ::selection{background:var(--teal-dim);color:var(--teal-bright);}
+        #term::-webkit-scrollbar,#sidebar::-webkit-scrollbar{width:8px;}
+        #term::-webkit-scrollbar-thumb,#sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+    </style>
+</head>
+<body>
+<header>
+    <div class="brand">
+        <p class="eyebrow">CCNA // config-mode drill</p>
+        <h1>IOS Drill</h1>
+    </div>
+    <button id="resetBtn" class="danger">Reset device</button>
+</header>
+
+<main>
+    <div id="termWrap">
+        <div id="term"></div>
+        <div id="inputRow">
+            <span id="promptSpan"></span>
+            <input id="cmdInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="side-section">
+            <div class="side-title">Tasks <span class="score" id="scoreLabel">0/8</span></div>
+            <div id="taskList"></div>
+        </div>
+        <div class="side-section">
+            <div class="side-title">Quick reference</div>
+            <div id="refPanel"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+    /*helpers*/
+    function ipToInt(ip){
+        const p = ip.split('.').map(Number);
+        if(p.length!==4||p.some(n=>isNaN(n)||n<0||n>255)) return null;
+        return ((p[0]<<24)>>>0)+(p[1]<<16)+(p[2]<<8)+p[3];
+    }
+    function isValidIp(ip){ return ipToInt(ip)!==null; }
+    function isValidMask(m){
+        const n = ipToInt(m);
+        if(n===null) return false;
+        const bin = (n>>>0).toString(2).padStart(32,'0');
+        return /^1*0*$/.test(bin);
+    }
+    const IFACE_MAP = {
+        gigabitethernet:'GigabitEthernet', fastethernet:'FastEthernet',
+        serial:'Serial', loopback:'Loopback', vlan:'Vlan', ethernet:'Ethernet'
+    };
+    function normalizeIface(raw){
+        const m = raw.match(/^([a-zA-Z]+)(.*)$/);
+        if(!m) return null;
+        const letters = m[1].toLowerCase();
+        const rest = m[2];
+        const candidates = Object.keys(IFACE_MAP);
+        const match = candidates.find(c=>c.startsWith(letters));
+        if(!match) return null;
+        return IFACE_MAP[match]+rest;
+    }
+
+    /*device state*/
+    function freshState(){
+        return {
+            hostname:'Router',
+            mode:'user', // user, priv, config, config-if, config-line, config-router
+            currentIface:null,
+            currentLine:null,
+            interfaces:{},
+            lines:{},
+            ospf:null,
+            staticRoutes:[],
+            enableSecret:null,
+            enablePassword:null,
+            serviceEncryption:false,
+            domainLookup:true,
+            motd:null,
+            usernames:[],
+            saved:false,
+            reachedPriv:false,
+            awaiting:null
+        };
+    }
+    let state = freshState();
+    let cmdHistory = [];
+    let histIdx = -1;
+
+    /*prompt*/
+    function promptText(){
+        const h = state.hostname;
+        switch(state.mode){
+            case 'user': return h+'>';
+            case 'priv': return h+'#';
+            case 'config': return h+'(config)#';
+            case 'config-if': return h+'(config-if)#';
+            case 'config-line': return h+'(config-line)#';
+            case 'config-router': return h+'(config-router)#';
+            default: return h+'>';
+        }
+    }
+    function updatePromptUI(){
+        document.getElementById('promptSpan').textContent = promptText();
+        document.getElementById('cmdInput').type = state.awaiting==='enablepw' ? 'password' : 'text';
+    }
+
+    /*terminal output*/
+    const termEl = document.getElementById('term');
+    function printLine(text, cls){
+        const div = document.createElement('div');
+        div.className = 'line '+(cls||'out');
+        div.textContent = text;
+        termEl.appendChild(div);
+        termEl.scrollTop = termEl.scrollHeight;
+    }
+    function printCmdEcho(promptStr, cmdText){
+        const div = document.createElement('div');
+        div.className = 'line cmd';
+        const p = document.createElement('span');
+        p.className='prompt'; p.textContent = promptStr;
+        div.appendChild(p);
+        div.appendChild(document.createTextNode(cmdText));
+        termEl.appendChild(div);
+        termEl.scrollTop = termEl.scrollHeight;
+    }
+    function printBlock(text, cls){
+        text.split('\n').forEach(l=>printLine(l, cls));
+    }
+    function invalidInput(){
+        printLine('% Invalid input detected at \'^\' marker.', 'err');
+    }
+    function incomplete(){
+        printLine('% Incomplete command.', 'err');
+    }
+
+    /*show handlers*/
+    function buildRunningConfig(){
+        const lines = ['Building configuration...','',
+            'Current configuration : '+(400+Object.keys(state.interfaces).length*80)+' bytes','!'];
+        lines.push('hostname '+state.hostname);
+        lines.push('!');
+        if(state.enableSecret) lines.push('enable secret 5 '+(state.serviceEncryption?'$1$mERr$hx5rVt7rPNoS4wqbXKX7m0':'')+ (state.serviceEncryption?'':state.enableSecret));
+        if(state.enablePassword && !state.enableSecret) lines.push('enable password '+state.enablePassword);
+        if(state.enableSecret||state.enablePassword) lines.push('!');
+        if(!state.domainLookup) { lines.push('no ip domain-lookup'); lines.push('!'); }
+        Object.keys(state.interfaces).forEach(name=>{
+            const iface = state.interfaces[name];
+            lines.push('interface '+name);
+            if(iface.description) lines.push(' description '+iface.description);
+            if(iface.ip) lines.push(' ip address '+iface.ip+' '+iface.mask);
+            else lines.push(' no ip address');
+            lines.push(iface.shutdown ? ' shutdown' : ' no shutdown');
+            lines.push('!');
+        });
+        if(state.ospf){
+            lines.push('router ospf '+state.ospf.processId);
+            if(state.ospf.routerId) lines.push(' router-id '+state.ospf.routerId);
+            state.ospf.networks.forEach(n=>lines.push(' network '+n.net+' '+n.wc+' area '+n.area));
+            lines.push('!');
+        }
+        state.staticRoutes.forEach(r=>lines.push('ip route '+r.network+' '+r.mask+' '+r.nexthop));
+        if(state.staticRoutes.length) lines.push('!');
+        if(state.motd){ lines.push('banner motd ^C'+state.motd+'^C'); lines.push('!'); }
+        Object.keys(state.lines).forEach(key=>{
+            const l = state.lines[key];
+            lines.push('line '+key.replace('con0','con 0').replace(/^vty(\d+)-(\d+)$/,'vty $1 $2'));
+            if(l.password) lines.push('  password '+l.password);
+            if(l.loginLocal) lines.push('  login local'); else if(l.login) lines.push('  login');
+            if(l.transport) lines.push('  transport input '+l.transport);
+            lines.push('!');
+        });
+        lines.push('end');
+        return lines.join('\n');
+    }
+    function buildIpIntBrief(){
+        const rows = [['Interface','IP-Address','OK?','Method','Status','Protocol']];
+        Object.keys(state.interfaces).forEach(name=>{
+            const iface = state.interfaces[name];
+            const ip = iface.ip || 'unassigned';
+            const method = iface.ip ? 'manual' : 'unset';
+            const status = iface.shutdown ? 'administratively down' : (iface.ip ? 'up' : 'down');
+            const proto = iface.shutdown ? 'down' : (iface.ip ? 'up' : 'down');
+            rows.push([name, ip, 'YES', method, status, proto]);
+        });
+        if(rows.length===1) return 'No interfaces configured yet.';
+        const widths = [23,16,5,8,23,8];
+        return rows.map(r=>r.map((c,i)=>String(c).padEnd(widths[i])).join(' ')).join('\n');
+    }
+    function buildIpRoute(){
+        const out = [];
+        Object.keys(state.interfaces).forEach(name=>{
+            const iface = state.interfaces[name];
+            if(iface.ip && !iface.shutdown){
+                const netInt = (ipToInt(iface.ip) & ipToInt(iface.mask))>>>0;
+                const bits = (ipToInt(iface.mask)>>>0).toString(2).split('0')[0].length;
+                out.push('C    '+intFromMask(netInt)+'/'+bits+' is directly connected, '+name);
+            }
+        });
+        state.staticRoutes.forEach(r=>{
+            out.push('S    '+r.network+'/'+maskToPrefix(r.mask)+' [1/0] via '+r.nexthop);
+        });
+        if(out.length===0) return 'No routes configured.';
+        return 'Codes: C - connected, S - static\n\n'+out.join('\n');
+    }
+    function intFromMask(n){
+        n=n>>>0;
+        return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.');
+    }
+    function maskToPrefix(mask){
+        const n = ipToInt(mask)>>>0;
+        return n.toString(2).split('0').join('').length;
+    }
+    function showHandler(subTokens){
+        const sub = subTokens.join(' ').toLowerCase();
+        if(sub==='' ){ incomplete(); return; }
+        if('running-config'.startsWith(sub.split(' ')[0]) && subTokens.length<=1 || sub.startsWith('run')){
+            if(state.mode==='user'){ printLine('% This command requires privileged EXEC mode.','err'); return; }
+            printBlock(buildRunningConfig(),'out'); return;
+        }
+        if(sub.startsWith('ip interface brief') || sub.startsWith('ip int br') || sub==='ip int' ){
+            printBlock(buildIpIntBrief(),'out'); return;
+        }
+        if(sub.startsWith('ip route')){
+            printBlock(buildIpRoute(),'out'); return;
+        }
+        if(sub.startsWith('version')){
+            printBlock('Cisco IOS Software, Simulated Version 15.x\nROM: Bootstrap program\n'+state.hostname+' uptime is 0 minutes\nSystem image file is "flash:sim-ios.bin"','out');
+            return;
+        }
+        if(sub.startsWith('interfaces') || sub.startsWith('interface')){
+            if(Object.keys(state.interfaces).length===0){ printLine('No interfaces configured yet.','out'); return; }
+            Object.keys(state.interfaces).forEach(name=>{
+                const iface = state.interfaces[name];
+                printLine(name+' is '+(iface.shutdown?'administratively down':'up')+', line protocol is '+(iface.shutdown?'down':(iface.ip?'up':'down')),'out');
+                if(iface.ip) printLine('  Internet address is '+iface.ip+'/'+maskToPrefix(iface.mask),'out');
+            });
+            return;
+        }
+        invalidInput();
+    }
+
+    /*task checklist*/
+    const TASKS = [
+        {id:'priv', text:'Enter privileged EXEC mode', check:s=>s.reachedPriv},
+        {id:'host', text:'Set the hostname to R1', check:s=>s.hostname==='R1'},
+        {id:'iface', text:'Configure GigabitEthernet0/0 with IP 192.168.1.1 255.255.255.0 and bring it up', check:s=>{
+                const i = s.interfaces['GigabitEthernet0/0'];
+                return !!i && i.ip==='192.168.1.1' && i.mask==='255.255.255.0' && !i.shutdown;
+            }},
+        {id:'secret', text:'Set an enable secret of "cisco123"', check:s=>s.enableSecret==='cisco123'},
+        {id:'con', text:'Set console line password to "letmein" with login required', check:s=>{
+                const l = s.lines['con0'];
+                return !!l && l.password==='letmein' && l.login;
+            }},
+        {id:'vty', text:'Restrict VTY lines to SSH only (transport input ssh)', check:s=>{
+                return Object.keys(s.lines).some(k=>k.startsWith('vty') && s.lines[k].transport==='ssh');
+            }},
+        {id:'route', text:'Add a default static route via 10.0.0.1', check:s=>{
+                return s.staticRoutes.some(r=>r.network==='0.0.0.0' && r.mask==='0.0.0.0' && r.nexthop==='10.0.0.1');
+            }},
+        {id:'save', text:'Save the running configuration to startup-config', check:s=>s.saved}
+    ];
+    function renderTasks(){
+        const list = document.getElementById('taskList');
+        list.innerHTML='';
+        let done=0;
+        TASKS.forEach(t=>{
+            const ok = t.check(state);
+            if(ok) done++;
+            const div = document.createElement('div');
+            div.className='task'+(ok?' done':'');
+            div.innerHTML = '<div class="task-check">'+(ok?'✓':'')+'</div><div class="task-text">'+t.text+'</div>';
+            list.appendChild(div);
+        });
+        document.getElementById('scoreLabel').textContent = done+'/'+TASKS.length;
+    }
+
+    /* reference panel*/
+    function renderRef(){
+        const ref = document.getElementById('refPanel');
+        ref.innerHTML = `
+    <div class="ref-mode">User exec ></div>
+    <div class="ref-cmd"><b>enable</b> — privileged mode</div>
+    <div class="ref-mode">Privileged #</div>
+    <div class="ref-cmd"><b>configure terminal</b><br><b>show running-config</b><br><b>show ip interface brief</b><br><b>show ip route</b><br><b>copy running-config startup-config</b></div>
+    <div class="ref-mode">Global config</div>
+    <div class="ref-cmd"><b>hostname NAME</b><br><b>interface g0/0</b><br><b>line console 0 / line vty 0 4</b><br><b>router ospf 1</b><br><b>ip route NET MASK NEXTHOP</b><br><b>enable secret PASS</b></div>
+    <div class="ref-mode">Interface config</div>
+    <div class="ref-cmd"><b>ip address IP MASK</b><br><b>no shutdown</b><br><b>description TEXT</b></div>
+    <div class="ref-mode">Line config</div>
+    <div class="ref-cmd"><b>password PASS</b><br><b>login</b><br><b>transport input ssh</b></div>
+    <div class="ref-mode">Router (OSPF) config</div>
+    <div class="ref-cmd"><b>network NET WILDCARD area N</b></div>
+  `;
+    }
+
+    /* command execution */
+    function execute(raw){
+        const trimmed = raw.trim();
+        if(trimmed==='') return;
+
+        if(state.awaiting==='enablepw'){
+            printCmdEcho(promptText(),'');
+            const ok = (state.enableSecret && trimmed===state.enableSecret) || (!state.enableSecret && state.enablePassword && trimmed===state.enablePassword);
+            state.awaiting=null;
+            if(ok){ state.mode='priv'; state.reachedPriv=true; }
+            else printLine('% Bad secrets','err');
+            afterCommand();
+            return;
+        }
+
+        printCmdEcho(promptText(), trimmed);
+        const tokens = trimmed.split(/\s+/);
+        const t0 = tokens[0].toLowerCase();
+
+        // universal
+        if(t0==='exit'){
+            if(state.mode==='user'){ printLine('','out'); }
+            else if(state.mode==='priv'){ state.mode='user'; }
+            else if(state.mode==='config'){ state.mode='priv'; }
+            else if(state.mode==='config-if'){ state.mode='config'; state.currentIface=null; }
+            else if(state.mode==='config-line'){ state.mode='config'; state.currentLine=null; }
+            else if(state.mode==='config-router'){ state.mode='config'; }
+            afterCommand(); return;
+        }
+        if(t0==='end'){
+            if(['config','config-if','config-line','config-router'].includes(state.mode)){
+                state.mode='priv'; state.currentIface=null; state.currentLine=null;
+            } else { invalidInput(); }
+            afterCommand(); return;
+        }
+        if(t0==='?'){
+            printLine('Type a command. See the quick reference panel for available commands per mode.','out');
+            afterCommand(); return;
+        }
+
+        if(state.mode==='user') handleUser(tokens);
+        else if(state.mode==='priv') handlePriv(tokens);
+        else if(state.mode==='config') handleConfig(tokens);
+        else if(state.mode==='config-if') handleConfigIf(tokens);
+        else if(state.mode==='config-line') handleConfigLine(tokens);
+        else if(state.mode==='config-router') handleConfigRouter(tokens);
+
+        afterCommand();
+    }
+
+    function afterCommand(){
+        updatePromptUI();
+        renderTasks();
+    }
+
+    function handleUser(tokens){
+        const t0 = tokens[0].toLowerCase();
+        if('enable'.startsWith(t0) && t0.length>=2){
+            if(state.enableSecret || state.enablePassword){
+                printLine('Password: ','out');
+                state.awaiting='enablepw';
+            } else {
+                state.mode='priv'; state.reachedPriv=true;
+            }
+            return;
+        }
+        if(t0==='ping'){
+            if(tokens.length<2){ incomplete(); return; }
+            if(!isValidIp(tokens[1])){ invalidInput(); return; }
+            printBlock('Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos to '+tokens[1]+', timeout is 2 seconds:\n!!!!!\nSuccess rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms','out');
+            return;
+        }
+        if(t0==='show'){ showHandler(tokens.slice(1)); return; }
+        if(t0==='disable'){ return; }
+        invalidInput();
+    }
+
+    function handlePriv(tokens){
+        const t0 = tokens[0].toLowerCase();
+        const rest = tokens.slice(1).join(' ').toLowerCase();
+        if('configure'.startsWith(t0) && t0.length>=4){
+            if(tokens[1] && 'terminal'.startsWith(tokens[1].toLowerCase())){
+                state.mode='config';
+                printLine('Enter configuration commands, one per line.  End with CNTL/Z.','out');
+            } else incomplete();
+            return;
+        }
+        if(t0==='show'){ showHandler(tokens.slice(1)); return; }
+        if(t0==='copy' && rest.includes('running-config') && rest.includes('startup-config')){
+            printBlock('Destination filename [startup-config]?\nBuilding configuration...\n[OK]','out');
+            state.saved=true;
+            return;
+        }
+        if(t0==='write' || t0==='wr'){
+            printBlock('Building configuration...\n[OK]','out');
+            state.saved=true;
+            return;
+        }
+        if(t0==='reload'){
+            printLine('Proceed with reload? [confirm] (simulated — no reset performed)','sys');
+            return;
+        }
+        if(t0==='disable'){ state.mode='user'; return; }
+        if(t0==='ping'){
+            if(tokens.length<2){ incomplete(); return; }
+            if(!isValidIp(tokens[1])){ invalidInput(); return; }
+            printBlock('Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos to '+tokens[1]+', timeout is 2 seconds:\n!!!!!\nSuccess rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms','out');
+            return;
+        }
+        invalidInput();
+    }
+
+    function handleConfig(tokens){
+        const t0 = tokens[0].toLowerCase();
+        if('hostname'.startsWith(t0) && t0.length>=2){
+            if(!tokens[1]){ incomplete(); return; }
+            state.hostname = tokens[1];
+            return;
+        }
+        if('interface'.startsWith(t0) && t0.length>=3){
+            if(!tokens[1]){ incomplete(); return; }
+            const name = normalizeIface(tokens[1]);
+            if(!name){ invalidInput(); return; }
+            if(!state.interfaces[name]) state.interfaces[name] = {ip:null,mask:null,description:null,shutdown:true};
+            state.currentIface = name;
+            state.mode='config-if';
+            return;
+        }
+        if('line'.startsWith(t0) && t0.length>=2){
+            if(tokens[1] && 'console'.startsWith(tokens[1].toLowerCase())){
+                state.currentLine='con0';
+                if(!state.lines['con0']) state.lines['con0']={password:null,login:false,loginLocal:false,transport:null};
+                state.mode='config-line';
+                return;
+            }
+            if(tokens[1] && 'vty'.startsWith(tokens[1].toLowerCase())){
+                const a = tokens[2]||'0', b = tokens[3]||a;
+                const key = 'vty'+a+'-'+b;
+                state.currentLine=key;
+                if(!state.lines[key]) state.lines[key]={password:null,login:false,loginLocal:false,transport:null};
+                state.mode='config-line';
+                return;
+            }
+            incomplete(); return;
+        }
+        if('router'.startsWith(t0) && t0.length>=2){
+            if(tokens[1] && 'ospf'.startsWith(tokens[1].toLowerCase())){
+                const pid = tokens[2] || '1';
+                if(!state.ospf) state.ospf = {processId:pid, networks:[], routerId:null};
+                state.mode='config-router';
+                return;
+            }
+            incomplete(); return;
+        }
+        if(t0==='ip' && tokens[1] && tokens[1].toLowerCase()==='route'){
+            if(tokens.length<5){ incomplete(); return; }
+            const [,,network,mask,nexthop] = tokens;
+            if(!isValidIp(network)||!isValidMask(mask)||!isValidIp(nexthop)){ invalidInput(); return; }
+            state.staticRoutes.push({network,mask,nexthop});
+            return;
+        }
+        if(t0==='ip' && tokens[1] && tokens[1].toLowerCase()==='domain-name'){
+            state.domainName = tokens[2]||''; return;
+        }
+        if(t0==='no' && tokens[1] && tokens[1].toLowerCase()==='ip' && tokens[2] && tokens[2].toLowerCase()==='domain-lookup'){
+            state.domainLookup=false; return;
+        }
+        if('enable'.startsWith(t0) && t0.length>=3){
+            if(tokens[1] && 'secret'.startsWith(tokens[1].toLowerCase())){
+                if(!tokens[2]){ incomplete(); return; }
+                state.enableSecret = tokens[2]; return;
+            }
+            if(tokens[1] && 'password'.startsWith(tokens[1].toLowerCase())){
+                if(!tokens[2]){ incomplete(); return; }
+                state.enablePassword = tokens[2]; return;
+            }
+            incomplete(); return;
+        }
+        if(t0==='service' && tokens[1] && tokens[1].toLowerCase()==='password-encryption'){
+            state.serviceEncryption=true; return;
+        }
+        if(t0==='username'){
+            if(tokens.length<4){ incomplete(); return; }
+            state.usernames.push({name:tokens[1],password:tokens[3]});
+            return;
+        }
+        if(t0==='banner' && tokens[1] && tokens[1].toLowerCase()==='motd'){
+            const rawAfter = tokens.slice(2).join(' ');
+            if(!rawAfter){ incomplete(); return; }
+            const delim = rawAfter[0];
+            const restText = rawAfter.slice(1);
+            const end = restText.indexOf(delim);
+            state.motd = end>=0 ? restText.slice(0,end) : restText;
+            return;
+        }
+        if(t0==='no' && tokens[1] && 'shutdown'.startsWith((tokens[1]||'').toLowerCase())){
+            invalidInput(); return; // not valid at global config level
+        }
+        invalidInput();
+    }
+
+    function handleConfigIf(tokens){
+        const t0 = tokens[0].toLowerCase();
+        const iface = state.interfaces[state.currentIface];
+        if(t0==='ip' && tokens[1] && 'address'.startsWith(tokens[1].toLowerCase())){
+            if(!tokens[2]||!tokens[3]){ incomplete(); return; }
+            if(!isValidIp(tokens[2])){ invalidInput(); return; }
+            if(!isValidMask(tokens[3])){ invalidInput(); return; }
+            iface.ip = tokens[2]; iface.mask = tokens[3];
+            return;
+        }
+        if(t0==='no' && tokens[1] && 'shutdown'.startsWith(tokens[1].toLowerCase())){
+            iface.shutdown = false; return;
+        }
+        if('shutdown'.startsWith(t0) && t0.length>=2){
+            iface.shutdown = true; return;
+        }
+        if('description'.startsWith(t0) && t0.length>=4){
+            iface.description = tokens.slice(1).join(' ');
+            return;
+        }
+        if(t0==='switchport'){
+            iface.switchport = tokens.slice(1).join(' ') || 'access';
+            return;
+        }
+        if(t0==='duplex' || t0==='speed'){
+            return; // accepted, no-op
+        }
+        invalidInput();
+    }
+
+    function handleConfigLine(tokens){
+        const t0 = tokens[0].toLowerCase();
+        const line = state.lines[state.currentLine];
+        if('password'.startsWith(t0) && t0.length>=3){
+            if(!tokens[1]){ incomplete(); return; }
+            line.password = tokens[1]; return;
+        }
+        if(t0==='login'){
+            if(tokens[1] && tokens[1].toLowerCase()==='local'){ line.loginLocal=true; line.login=false; }
+            else { line.login=true; line.loginLocal=false; }
+            return;
+        }
+        if('transport'.startsWith(t0) && t0.length>=4){
+            if(tokens[1] && tokens[1].toLowerCase()==='input' && tokens[2]){
+                line.transport = tokens[2].toLowerCase();
+                return;
+            }
+            incomplete(); return;
+        }
+        if(t0==='exec-timeout'){
+            return; // accepted, no-op
+        }
+        invalidInput();
+    }
+
+    function handleConfigRouter(tokens){
+        const t0 = tokens[0].toLowerCase();
+        if(t0==='network'){
+            if(tokens.length<5 || tokens[3].toLowerCase()!=='area'){ incomplete(); return; }
+            const [,net,wc,,area] = tokens;
+            if(!isValidIp(net)||!isValidIp(wc)){ invalidInput(); return; }
+            state.ospf.networks.push({net,wc,area});
+            return;
+        }
+        if(t0==='router-id'){
+            if(!tokens[1]||!isValidIp(tokens[1])){ invalidInput(); return; }
+            state.ospf.routerId = tokens[1];
+            return;
+        }
+        invalidInput();
+    }
+
+    /* ================= input wiring ================= */
+    const input = document.getElementById('cmdInput');
+    input.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){
+            const val = input.value;
+            input.value='';
+            execute(val);
+            if(state.awaiting!=='enablepw' && val.trim()!==''){
+                cmdHistory.push(val); histIdx = cmdHistory.length;
+            }
+        } else if(e.key==='ArrowUp'){
+            if(histIdx>0){ histIdx--; input.value = cmdHistory[histIdx]||''; }
+            e.preventDefault();
+        } else if(e.key==='ArrowDown'){
+            if(histIdx<cmdHistory.length-1){ histIdx++; input.value = cmdHistory[histIdx]||''; }
+            else { histIdx = cmdHistory.length; input.value=''; }
+            e.preventDefault();
+        }
+    });
+    document.getElementById('term').addEventListener('click', ()=>input.focus());
+    document.body.addEventListener('click', (e)=>{ if(e.target.closest('#sidebar')) return; input.focus(); });
+
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+        if(!confirm('Reset the simulated device? This clears all configuration.')) return;
+        state = freshState();
+        cmdHistory=[]; histIdx=-1;
+        termEl.innerHTML='';
+        boot();
+    });
+
+    /*boot */
+    function boot(){
+        printBlock('Simulated Cisco IOS device ready.\nType commands as you would on a real router/switch. Try "enable" to get started.','sys');
+        updatePromptUI();
+        renderTasks();
+        renderRef();
+        input.focus();
+    }
+    boot();
+</script>
+</body>
+</html>
