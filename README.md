@@ -90,4 +90,3 @@ A simulated Cisco IOS command-line terminal for CCNA config-mode practice. Singl
 - Scenario picker with multiple task sets instead of one fixed checklist
 
 ---
-Pairs with **Subnet Forge** (addressing math) and **Topology Forge** (visual diagram → config generation) for full CCNA lab prep.
